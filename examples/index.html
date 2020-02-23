@@ -245,12 +245,12 @@
                         scene.add(new THREE.CameraHelper(camera));
                     }
 
-                    
+
                     // Create frustum to determine what is inside the camera's field of view.
                     camera.updateMatrix();
                     camera.updateMatrixWorld();
                     var frustum = new THREE.Frustum();
-                    frustum.setFromMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));  
+                    frustum.setFromMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
 
                     // Get center
                     var pos = new THREE.Vector3(x_center,y_center,plane.position.z);
@@ -260,7 +260,7 @@
                         setCamera(camera);
                         return camera;
                         }
-                    
+
                 };
             }
 
@@ -421,7 +421,7 @@
                 const ViewCameraPosition = ViewCamera.position;
                 const RealCameraPosition = RealCamera.position;
                 const ViewPoint = ViewCamera.getWorldDirection();
-                const cosAngle = 
+                const cosAngle =
                 ((ViewCameraPosition.x-ViewPoint.x)*(RealCameraPosition.x-ViewPoint.x)+
                 (ViewCameraPosition.y-ViewPoint.y)*(RealCameraPosition.y-ViewPoint.y) +
                 (ViewCameraPosition.z-ViewPoint.z)*(RealCameraPosition.z-ViewPoint.z))/
@@ -442,7 +442,7 @@
                 const indexCloserCamera = angle_cameras.indexOf(Math.max(...angle_cameras));
                 return (cameras.children[indexCloserCamera]);
             }
-        
+
 
             function keyDown(event) {
                 switch (event.key) {
@@ -600,6 +600,7 @@
         init();
         var gui = initGUI();
         animate();
+        setCamera(getCloserCamera());//changes view + texture
     </script>
 </body>
 
