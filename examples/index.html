@@ -96,7 +96,7 @@
             return false;
         }
 
-        function init() {
+        
             var container = document.createElement('div');
             document.body.appendChild(container);
             scene = new THREE.Scene();
@@ -401,6 +401,7 @@
                 textureCamera = camera;
                 setMaterial(textureMaterial, camera);
             }
+            
 
             function setCamera(camera) {
                 setView(camera);
@@ -477,6 +478,7 @@
                 nextCamera.updateProjectionMatrix();
             }
 
+
             /* preset scenes */
             scenes = {
                 Clear: function () {
@@ -511,7 +513,7 @@
                     // orbitControls is broken here
                 },
             }
-        }
+        
 
         // GUI functions
 
@@ -564,8 +566,12 @@
         }
 
         var todoTimestamp = 0;
+
+        
         function animate(timestamp) {
+            
             requestAnimationFrame(animate);
+            
             if (todos.length && timestamp > todoTimestamp) {
                 todos.shift()();
                 todoTimestamp = timestamp + 200;
@@ -593,14 +599,13 @@
             if (viewMaterials[nextCamera.name])
                 viewMaterials[nextCamera.name].setValues(viewMaterialOptions);
 
-            render();
+                setTexture(getCloserCamera());render();
         }
 
 
-        init();
+        //init();
         var gui = initGUI();
         animate();
-        setCamera(getCloserCamera());//changes view + texture
     </script>
 </body>
 
