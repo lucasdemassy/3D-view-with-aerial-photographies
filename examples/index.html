@@ -682,6 +682,9 @@
                     loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0205.jpg.xml', 'Abbey-IMG_0205.jpg', source);
                     loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0206.jpg.xml', 'Abbey-IMG_0206.jpg', source);
                     loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0207.jpg.xml', 'Abbey-IMG_0207.jpg', source);
+                    var path2 = 'https://raw.githubusercontent.com/lucasdemassy/3D-view-with-aerial-photographies/ChargementImage/';
+                    var source2 = new FetchSource(path2);
+                    loadImage('photo1.jpg', source2);
                     orbitControls.target.set(0, 0, plane.position.z);
                 },
                 Maurepas: function () {
