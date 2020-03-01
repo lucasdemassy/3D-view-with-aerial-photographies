@@ -1,331 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>THREE - Photogrammetric Camera</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-        <style>
-            body {
-                overflow: hidden;
-                margin: 0;
-            }
-            #help {
-              margin: 20px;
-            }
-        </style>
-    </head>
-    <body>
-        <div id='help'>
-            <h1>Image Based Rendering of <a href="https://github.com/micmacIGN">Micmac</a> datasets</h1>
-            <form onsubmit="return onFilesSubmit(this)"><input id="files" type="file" multiple><input type="submit"></form>
-            You can open Micmac files here using drag and drop or here
-            <ul>
-                <li>Images: {name}.jpg files</li>
-                <li>Orientations: Orientation-{name}.{ext}.xml (orientations and images are matched by name)</li>
-                <li>Intrinsics: AutoCal*.xml (must be drag-and-dropped jointly with orientations that share its intrinsics)</li>
-                <li>PointClouds: *.ply (eg the AperiCloud)</li>
-            </ul>
-
-            <p>The scene is colored by the intrinsic colors of the pointcloud, replaced by the unprojection of the image from the current texture camera. The scene is composed of :</p>
-            <ul>
-                <li>a large view-centered sphere (500m)</li>
-                <li>an horizontal plane at a given absolute altitude</li>
-                <li>the loaded point clouds if any.</li>
-            </ul>
-            <p><img src="data/uv.jpg" width=30px/> An orientation with no image loaded shows this calibration texture by default. </p>
-
-            <p>Keyboard Actions :</p>
-            <ul>
-                <li>&darr;/&uarr;: move the view camera to the previous/next image</li>
-                <li>&larr;/&rarr;: move the texture camera to the previous/next image</li>
-                <li>PageDown/PageUp: move both the texture and the view cameras to the previous/next image</li>
-                <li>t: set the texture camera to the current view camera</li>
-                <li>v: set the view camera to the current texture camera</li>
-                <li>-/+: decrease/increase the point size</li>
-                <li>c: print the current camera in the console</li>
-                <li>p: print the current camera position in the console</li>
-                <li>h: show/hide the GUI</li>
-            </ul>
-            Mathieu Brédif (<a href="http://recherche.ign.fr/labos/matis/~bredif">IGN ENSG, Lastig/Geovis, Univ. Paris Est</a>, <a href="http://github.com/mbredif/three-photogrammetric-camera">github</a>)
-        </div>
-        <script src="../dist/three-photogrammetric-camera.js"></script>
-        <script>
-            var THREE = ThreePhotogrammetricCamera.THREE;
-            var PhotogrammetricCamera = ThreePhotogrammetricCamera.PhotogrammetricCamera;
-            var MatisOrientationParser = ThreePhotogrammetricCamera.MatisOrientationParser;
-            var MicmacOrientationParser = ThreePhotogrammetricCamera.MicmacOrientationParser;
-            var FetchSource = ThreePhotogrammetricCamera.FetchSource;
-            var FilesSource = ThreePhotogrammetricCamera.FilesSource;
-            var OrientedImageMaterial = ThreePhotogrammetricCamera.OrientedImageMaterial;
-        </script>
-        <script src="js/dat.gui.min.js"></script>
-        <script src="js/PLYLoader.js"></script>
-        <script src="js/OrbitControls.js"></script>
-        <script src="js/itowns.js"></script>
-        <script>
-            var orbitTarget, orbitControls;
-            var scene, renderer, plyGroup, cameras;
-            var textureMaterial, wireMaterial, viewMaterialOptions = {}, viewMaterials = {};
-            var textures = {};
-            var prevCamera = new PhotogrammetricCamera();
-            var viewCamera = new PhotogrammetricCamera();
-            var nextCamera = new PhotogrammetricCamera();
-            var textureCamera = viewCamera;
-            var duration = 0.3;
-            var useCustomCameraHelper = true;
-            var scenes;
-            var todos = [];
-            var plane, sphere;
-            viewCamera.zoom = 0.8; // zoom out a bit to see the image borders
-            viewCamera.up.set(0, 0, 1);
-            var sphereRadius = 5000;
-            var epsilonRadius = 100;
-
-            var addFiles;
-            function onFilesSubmit(form) {
-                addFiles(form.files.files);
-                return false;
-            }
-
-            function init() {
-                var container = document.createElement( 'div' );
-                document.body.appendChild( container );
-                scene = new THREE.Scene();
-                cameras = new THREE.Group();
-                cameras.visible = false;
-                scene.add(cameras);
-                scene.add(viewCamera);
-                var textureLoader = new THREE.TextureLoader();
-                const uvTexture = textureLoader.load('data/uv.jpg');
-
-                // materials
-                wireMaterial = new THREE.MeshBasicMaterial( {color: 0x00ffff, wireframe: true} );
-                viewMaterialOptions = {
-                    map: uvTexture,
-                    opacity: 1,
-                    transparent: true,
-                    blending: THREE.NormalBlending,
-                };
-
-                textureMaterial = new OrientedImageMaterial({
-                    map: uvTexture,
-                    size: 2,
-                    sizeAttenuation: false,
-                    vertexColors: THREE.VertexColors,
-                    blending: THREE.NormalBlending,
-                    color: 0xff0000,
-                    transparent: true,
-                });
-                sphere = new THREE.Mesh(new THREE.SphereBufferGeometry(-1, 32, 32), textureMaterial);
-                plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1000, 1000, 100, 100), textureMaterial);
-                sphere.scale.set(sphereRadius, sphereRadius, sphereRadius);
-                viewCamera.add(sphere);
-                scene.add(plane);
-
-                // renderer
-
-                renderer = new THREE.WebGLRenderer( { antialias: true } );
-                renderer.setPixelRatio( window.devicePixelRatio );
-                renderer.setSize( window.innerWidth, window.innerHeight );
-                container.appendChild( renderer.domElement );
-
-                // resize
-
-                window.addEventListener( 'resize', onWindowResize, false );
-
-
-                // controls
-                orbitControls = new THREE.OrbitControls( viewCamera, renderer.domElement );
-                orbitControls.enableDamping = false;
-                orbitControls.screenSpacePanning = false;
-                orbitControls.maxPolarAngle = 0.75 * Math.PI;
-                orbitControls.enableKeys = false;
-
-                /* Ply loading */
-                plyGroup = new THREE.Group();
-                scene.add(plyGroup);
-
-
-
-
-                /* Orientation loading */
-                function cameraHelper(camera) {
-                    // create the group (looking at intrinsics only) that should be added to the camera frame.
-                    var group = new THREE.Group();
-
-
-
-
-
-
-
-
-                    let prop = {
-                      qx:-0.000656002501752845,
-                      qy:	-0.00387053817144744,
-                      qw:0.835775554333095,
-                      fx:2003.62944511428,
-                      fy:2003.62944511428,
-                      px:3712.88883750175,
-                      py:3896.74250583491,
-                      sk:0,
-                      sx:8950,
-                      sy:9400,
-                      c3:null,
-                      c5:null,
-                      c7:null,
-                      cm:null,
-                      cx:null,
-                      cy:null,
-                      m00:0.99981330784,
-                      m01:0.00045168044464,
-                      m10:-0.00051940541796,
-                      m11:1.00006519157,
-                      m20:575.6508756034,
-                      m21:1090.5137974068,
-
-                    }
-                    let epsgquaternion=2154;
-
-                    addOrientationCamera(prop, epsgquaternion);
-
-
-
-
-
-                    function addOrientationCamera(orientation_json, epsg_quaternion) {
-                      // We then create a photogrammetric camera using the PVA properties
-                      // Intrinsec properties
-                      var focal =  [orientation_json.fx, orientation_json.fy];
-                      var size = [orientation_json.sx, orientation_json.sy];
-                      //[ 9100, 9500 ]; //orientation_json.px * 2, orientation_json.py * 2];
-                      var point = [ orientation_json.px, orientation_json.py ];
-                      //var disto = [ { type: "ModRad", C: new THREE.Vector2(orientation_json.cx, orientation_json.cy), R: new THREE.Vector4(orientation_json.c3, orientation_json.c5, orientation_json.c7, orientation_json.cm), project: RadialDistortion.project } ];
-                      var disto = [];
-                      var imageMatrix = new THREE.Matrix4();
-                      if(orientation_json.m00 != undefined){  // If there are some Crop Infos, we set the image matrix (not identity)
-                          imageMatrix.elements[0]  = orientation_json.m00;
-                          imageMatrix.elements[1]  = orientation_json.m01;
-                          imageMatrix.elements[4]  = orientation_json.m10;
-                          imageMatrix.elements[5]  = orientation_json.m11;
-                          imageMatrix.elements[12] = orientation_json.m20;
-                          imageMatrix.elements[13] = orientation_json.m21;
-                      }
-                      var cameraP = new PhotogrammetricCamera(focal, size, point, 0, disto, undefined, undefined, undefined, imageMatrix );//, size, point, 0, [], 10, 10000); //, skew, distos, near, far);
-                      // We inject the name of the image in the camera attributes
-                      cameraP.name = 'photo1';
-                      cameraP.originalName = 'photo1';
-                      cameraP.propAdded = orientation_json; // Dirty and naughty: we add all info we got to the photogrammetric camera object
-
-                      // Extrinsec
-                      var quaternion = new THREE.Quaternion(orientation_json.qx, orientation_json.qy, orientation_json.qz, orientation_json.qw); // console.log(m.feature.vertices.slice(i * 3, i * 3 + 3));
-                      var pos = new THREE.Vector3(3,3,3); // console.log(pos); console.log(view.camera.camera3D.position);
-                      cameraP.position.copy(pos);
-
-                      /*
-                      // Here we need to check the coordinate system of the received camera
-                      // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
-                      if(epsg_quaternion != undefined && epsg_quaternion != 4978){  // projectionCode
-                          var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
-                          var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:' + epsg_quaternion, "EPSG:4978")(coords);
-                          quaternion.premultiply(quat_crs2crs);
-                      }
-
-
-                      // Here we need to check the coordinate system of the received camera
-                      // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
-                      if(epsg_quaternion == undefined){  // projectionCode
-                          var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
-                          var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:2154' //+ projectionCode, "EPSG:4978")(coords);
-                          quaternion.premultiply(quat_crs2crs);
-                          //quaternion.multiply(new THREE.Quaternion(1,0,0,0));
-                      }
-    */
-                      cameraP.quaternion.copy(quaternion);
-                      //cameras.add(cameraP);
-
-                      createCameraHelper(cameraP);
-                      // m.add(sceneAllCams);
-                    }
-
-                    // Function that create cameraHelper with all the properties of the oriented image
-                    // Picking on it to associate camera scene
-                    function createCameraHelper(cam){
-                        // console.log(cam);
-                        // Concerning the texture, Ideally we initiate with a low res (thumbnail) and then
-                        // when the user chooses that camera it'll load HiRes.
-                        // Low res should be found using camera name + "lowres".jpg for example or more dynamically
-                        // using IIP Image jp2 multi res
-                        var textureMaterialP = new OrientedImageMaterial({
-                            map: new itowns.THREE.TextureLoader().load(cam.name), // new itowns.THREE.TextureLoader().load('../data/uv.jpg'),
-                            opacity:1,
-                            transparent:true,
-                            side: THREE.DoubleSide
-                        });
-
-                        setMaterial(textureMaterialP, cam);
-                        var camHelper = cameraHelper(cam, textureMaterialP);
-                        var scale = 35 / 100;
-                        camHelper.scale.set(scale,scale,scale);
-                        cam.add(camHelper);
-                        cam.updateMatrixWorld();
-                        cameras.add(cam);
-                        // console.log(cam);
-                        // view.scene.add(cam);
-                    }
-
-
-
-
-
-                    /* Orientation loading */
-                    function cameraHelper(camera, mat) {
-                        var wireMaterial = new THREE.MeshBasicMaterial( {color: Math.random() * 0XFFFFFF, wireframe: true} );
-                        // create the group (looking at intrinsics only) that should be added to the camera frame.
-                        var group = new THREE.Group();
-                        // place a frustum
-                        {
-                            m = new THREE.Matrix4().getInverse(camera.projectionMatrix);
-                            var geometry = new THREE.BufferGeometry();
-                            var vertices = new Float32Array(15);
-                            // get the 4 corners on the near plane (neglecting distortion)
-                            new THREE.Vector3( -1, -1, -1 ).applyMatrix4(m).toArray(vertices,  3);
-                            new THREE.Vector3( -1,  1, -1 ).applyMatrix4(m).toArray(vertices,  6);
-                            new THREE.Vector3(  1,  1, -1 ).applyMatrix4(m).toArray(vertices,  9);
-                            new THREE.Vector3(  1, -1, -1 ).applyMatrix4(m).toArray(vertices, 12);
-                            var indices = [ 0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 1,  1, 3, 2,  1, 4, 3 ];
-                            geometry.setIndex( indices );
-                            geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-                            geometry.addGroup(0, 12, 0);
-                            geometry.addGroup(12, 6, 1);
-                            viewMaterials[camera.name] = new OrientedImageMaterial(viewMaterialOptions);
-                            viewMaterials[camera.name].map = textures[camera.name] || uvTexture;
-                            // mat.map = uvTexture;
-                            var mesh = new THREE.Mesh( geometry, [wireMaterial, mat] );
-                            mesh.scale.set(200, 200, 200);
-                            group.add(mesh);
-                        }
-                        // place a sphere at the camera center
-                        {
-                            var geometry = new THREE.SphereBufferGeometry(2, 8, 8 );
-                            var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-                           // group.add(new THREE.Mesh( geometry, material ));
-                        }
-                        return group;
-                    };
-
-
-
-
-
-
-
-
-
-
-
-
-
 <head>
     <title>THREE - Photogrammetric Camera</title>
     <meta charset="utf-8">
@@ -393,6 +67,7 @@
     <script src="js/dat.gui.min.js"></script>
     <script src="js/PLYLoader.js"></script>
     <script src="js/OrbitControls.js"></script>
+    <script src="js/itowns.js"></script>
     <script>
         var orbitTarget, orbitControls;
         var scene, renderer, plyGroup, cameras;
@@ -484,34 +159,210 @@
                 // create the group (looking at intrinsics only) that should be added to the camera frame.
                 var group = new THREE.Group();
 
+
+
+
+
+
+
+
+                let prop = {
+                  qx:-0.000656002501752845,
+                  qy:	-0.00387053817144744,
+                  qw:0.835775554333095,
+                  fx:2003.62944511428,
+                  fy:2003.62944511428,
+                  px:3712.88883750175,
+                  py:3896.74250583491,
+                  sk:0,
+                  sx:8950,
+                  sy:9400,
+                  c3:null,
+                  c5:null,
+                  c7:null,
+                  cm:null,
+                  cx:null,
+                  cy:null,
+                  m00:0.99981330784,
+                  m01:0.00045168044464,
+                  m10:-0.00051940541796,
+                  m11:1.00006519157,
+                  m20:575.6508756034,
+                  m21:1090.5137974068,
+
+                }
+                let epsgquaternion=2154;
+
+                addOrientationCamera(prop, epsgquaternion);
+
+
+
+
+
+                function addOrientationCamera(orientation_json, epsg_quaternion) {
+                  // We then create a photogrammetric camera using the PVA properties
+                  // Intrinsec properties
+                  var focal =  [orientation_json.fx, orientation_json.fy];
+                  var size = [orientation_json.sx, orientation_json.sy];
+                  //[ 9100, 9500 ]; //orientation_json.px * 2, orientation_json.py * 2];
+                  var point = [ orientation_json.px, orientation_json.py ];
+                  //var disto = [ { type: "ModRad", C: new THREE.Vector2(orientation_json.cx, orientation_json.cy), R: new THREE.Vector4(orientation_json.c3, orientation_json.c5, orientation_json.c7, orientation_json.cm), project: RadialDistortion.project } ];
+                  var disto = [];
+                  var imageMatrix = new THREE.Matrix4();
+                  if(orientation_json.m00 != undefined){  // If there are some Crop Infos, we set the image matrix (not identity)
+                      imageMatrix.elements[0]  = orientation_json.m00;
+                      imageMatrix.elements[1]  = orientation_json.m01;
+                      imageMatrix.elements[4]  = orientation_json.m10;
+                      imageMatrix.elements[5]  = orientation_json.m11;
+                      imageMatrix.elements[12] = orientation_json.m20;
+                      imageMatrix.elements[13] = orientation_json.m21;
+                  }
+                  var cameraP = new PhotogrammetricCamera(focal, size, point, 0, disto, undefined, undefined, undefined, imageMatrix );//, size, point, 0, [], 10, 10000); //, skew, distos, near, far);
+                  // We inject the name of the image in the camera attributes
+                  cameraP.name = 'photo1';
+                  cameraP.originalName = 'photo1';
+                  cameraP.propAdded = orientation_json; // Dirty and naughty: we add all info we got to the photogrammetric camera object
+
+                  // Extrinsec
+                  var quaternion = new THREE.Quaternion(orientation_json.qx, orientation_json.qy, orientation_json.qz, orientation_json.qw); // console.log(m.feature.vertices.slice(i * 3, i * 3 + 3));
+                  var pos = new THREE.Vector3(3,3,3); // console.log(pos); console.log(view.camera.camera3D.position);
+                  cameraP.position.copy(pos);
+
+                  /*
+                  // Here we need to check the coordinate system of the received camera
+                  // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
+                  if(epsg_quaternion != undefined && epsg_quaternion != 4978){  // projectionCode
+                      var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
+                      var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:' + epsg_quaternion, "EPSG:4978")(coords);
+                      quaternion.premultiply(quat_crs2crs);
+                  }
+
+
+                  // Here we need to check the coordinate system of the received camera
+                  // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
+                  if(epsg_quaternion == undefined){  // projectionCode
+                      var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
+                      var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:2154' //+ projectionCode, "EPSG:4978")(coords);
+                      quaternion.premultiply(quat_crs2crs);
+                      //quaternion.multiply(new THREE.Quaternion(1,0,0,0));
+                  }
+*/
+                  cameraP.quaternion.copy(quaternion);
+                  //cameras.add(cameraP);
+
+                  createCameraHelper(cameraP);
+                  // m.add(sceneAllCams);
+                }
+
+                // Function that create cameraHelper with all the properties of the oriented image
+                // Picking on it to associate camera scene
+                function createCameraHelper(cam){
+                    // console.log(cam);
+                    // Concerning the texture, Ideally we initiate with a low res (thumbnail) and then
+                    // when the user chooses that camera it'll load HiRes.
+                    // Low res should be found using camera name + "lowres".jpg for example or more dynamically
+                    // using IIP Image jp2 multi res
+                    var textureMaterialP = new OrientedImageMaterial({
+                        map: new itowns.THREE.TextureLoader().load(cam.name), // new itowns.THREE.TextureLoader().load('../data/uv.jpg'),
+                        opacity:1,
+                        transparent:true,
+                        side: THREE.DoubleSide
+                    });
+
+                    setMaterial(textureMaterialP, cam);
+                    var camHelper = cameraHelper(cam, textureMaterialP);
+                    var scale = 35 / 100;
+                    camHelper.scale.set(scale,scale,scale);
+                    cam.add(camHelper);
+                    cam.updateMatrixWorld();
+                    cameras.add(cam);
+                    // console.log(cam);
+                    // view.scene.add(cam);
+                }
+
+
+
+
+
+                /* Orientation loading */
+                function cameraHelper(camera, mat) {
+                    var wireMaterial = new THREE.MeshBasicMaterial( {color: Math.random() * 0XFFFFFF, wireframe: true} );
+                    // create the group (looking at intrinsics only) that should be added to the camera frame.
+                    var group = new THREE.Group();
+                    // place a frustum
+                    {
+                        m = new THREE.Matrix4().getInverse(camera.projectionMatrix);
+                        var geometry = new THREE.BufferGeometry();
+                        var vertices = new Float32Array(15);
+                        // get the 4 corners on the near plane (neglecting distortion)
+                        new THREE.Vector3( -1, -1, -1 ).applyMatrix4(m).toArray(vertices,  3);
+                        new THREE.Vector3( -1,  1, -1 ).applyMatrix4(m).toArray(vertices,  6);
+                        new THREE.Vector3(  1,  1, -1 ).applyMatrix4(m).toArray(vertices,  9);
+                        new THREE.Vector3(  1, -1, -1 ).applyMatrix4(m).toArray(vertices, 12);
+                        var indices = [ 0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 1,  1, 3, 2,  1, 4, 3 ];
+                        geometry.setIndex( indices );
+                        geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+                        geometry.addGroup(0, 12, 0);
+                        geometry.addGroup(12, 6, 1);
+                        viewMaterials[camera.name] = new OrientedImageMaterial(viewMaterialOptions);
+                        viewMaterials[camera.name].map = textures[camera.name] || uvTexture;
+                        // mat.map = uvTexture;
+                        var mesh = new THREE.Mesh( geometry, [wireMaterial, mat] );
+                        mesh.scale.set(200, 200, 200);
+                        group.add(mesh);
+                    }
+                    // place a sphere at the camera center
+                    {
+                        var geometry = new THREE.SphereBufferGeometry(2, 8, 8 );
+                        var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+                       // group.add(new THREE.Mesh( geometry, material ));
+                    }
+                    return group;
+                };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 // place a frustum
                 {
                     m = new THREE.Matrix4().getInverse(camera.projectionMatrix);
                     var geometry = new THREE.BufferGeometry();
                     var vertices = new Float32Array(15);
                     // get the 4 corners on the near plane (neglecting distortion)
-                    new THREE.Vector3(-1, -1, -1).applyMatrix4(m).toArray(vertices, 3);
-                    new THREE.Vector3(-1, 1, -1).applyMatrix4(m).toArray(vertices, 6);
-                    new THREE.Vector3(1, 1, -1).applyMatrix4(m).toArray(vertices, 9);
-                    new THREE.Vector3(1, -1, -1).applyMatrix4(m).toArray(vertices, 12);
-                    var indices = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1, 1, 3, 2, 1, 4, 3];
-                    geometry.setIndex(indices);
-                    geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    new THREE.Vector3( -1, -1, -1 ).applyMatrix4(m).toArray(vertices,  3);
+                    new THREE.Vector3( -1,  1, -1 ).applyMatrix4(m).toArray(vertices,  6);
+                    new THREE.Vector3(  1,  1, -1 ).applyMatrix4(m).toArray(vertices,  9);
+                    new THREE.Vector3(  1, -1, -1 ).applyMatrix4(m).toArray(vertices, 12);
+                    var indices = [ 0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 1,  1, 3, 2,  1, 4, 3 ];
+                    geometry.setIndex( indices );
+                    geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
                     geometry.addGroup(0, 12, 0);
                     geometry.addGroup(12, 6, 1);
 
                     viewMaterials[camera.name] = new OrientedImageMaterial(viewMaterialOptions);
                     viewMaterials[camera.name].map = textures[camera.name] || uvTexture;
-                    var mesh = new THREE.Mesh(geometry, [wireMaterial, viewMaterials[camera.name]]);
+                    var mesh = new THREE.Mesh( geometry, [wireMaterial, viewMaterials[camera.name]] );
                     mesh.scale.set(10, 10, 10);
                     group.add(mesh);
                 }
 
                 // place a sphere at the camera center
                 {
-                    var geometry = new THREE.SphereBufferGeometry(0.03, 8, 8);
-                    var material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-                    group.add(new THREE.Mesh(geometry, material));
+                    var geometry = new THREE.SphereBufferGeometry(0.03, 8, 8 );
+                    var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+                    group.add(new THREE.Mesh( geometry, material ));
                 }
 
                 return group;
