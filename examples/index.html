@@ -145,6 +145,9 @@
                 plyGroup = new THREE.Group();
                 scene.add(plyGroup);
 
+
+
+
                 /* Orientation loading */
                 function cameraHelper(camera) {
                     // create the group (looking at intrinsics only) that should be added to the camera frame.
@@ -184,63 +187,66 @@
                     }
                     let epsgquaternion=2154;
 
-                    // We then create a photogrammetric camera using the PVA properties
-                    // Intrinsec properties
-                    var focal =  [prop.fx, prop.fy];
-                    var size = [prop.sx, prop.sy];
-                    //[ 9100, 9500 ]; //prop.px * 2, prop.py * 2];
-                    var point = [ prop.px, prop.py ];
-                    //var disto = [ { type: "ModRad", C: new THREE.Vector2(prop.cx, prop.cy), R: new THREE.Vector4(prop.c3, prop.c5, prop.c7, prop.cm), project: RadialDistortion.project } ];
-                    var disto = [];
-                    var imageMatrix = new THREE.Matrix4();
-                    if(prop.m00 != undefined){  // If there are some Crop Infos, we set the image matrix (not identity)
-                        imageMatrix.elements[0]  = prop.m00;
-                        imageMatrix.elements[1]  = prop.m01;
-                        imageMatrix.elements[4]  = prop.m10;
-                        imageMatrix.elements[5]  = prop.m11;
-                        imageMatrix.elements[12] = prop.m20;
-                        imageMatrix.elements[13] = prop.m21;
+                    addOrientationCamera(prop, epsgquaternion);
+
+
+
+
+
+                    function addOrientationCamera(orientation_json, epsg_quaternion) {
+                      // We then create a photogrammetric camera using the PVA properties
+                      // Intrinsec properties
+                      var focal =  [orientation_json.fx, orientation_json.fy];
+                      var size = [orientation_json.sx, orientation_json.sy];
+                      //[ 9100, 9500 ]; //orientation_json.px * 2, orientation_json.py * 2];
+                      var point = [ orientation_json.px, orientation_json.py ];
+                      //var disto = [ { type: "ModRad", C: new THREE.Vector2(orientation_json.cx, orientation_json.cy), R: new THREE.Vector4(orientation_json.c3, orientation_json.c5, orientation_json.c7, orientation_json.cm), project: RadialDistortion.project } ];
+                      var disto = [];
+                      var imageMatrix = new THREE.Matrix4();
+                      if(orientation_json.m00 != undefined){  // If there are some Crop Infos, we set the image matrix (not identity)
+                          imageMatrix.elements[0]  = orientation_json.m00;
+                          imageMatrix.elements[1]  = orientation_json.m01;
+                          imageMatrix.elements[4]  = orientation_json.m10;
+                          imageMatrix.elements[5]  = orientation_json.m11;
+                          imageMatrix.elements[12] = orientation_json.m20;
+                          imageMatrix.elements[13] = orientation_json.m21;
+                      }
+                      var cameraP = new PhotogrammetricCamera(focal, size, point, 0, disto, undefined, undefined, undefined, imageMatrix );//, size, point, 0, [], 10, 10000); //, skew, distos, near, far);
+                      // We inject the name of the image in the camera attributes
+                      cameraP.name = 'photo1';
+                      cameraP.originalName = 'photo1';
+                      cameraP.propAdded = orientation_json; // Dirty and naughty: we add all info we got to the photogrammetric camera object
+
+                      // Extrinsec
+                      var quaternion = new THREE.Quaternion(orientation_json.qx, orientation_json.qy, orientation_json.qz, orientation_json.qw); // console.log(m.feature.vertices.slice(i * 3, i * 3 + 3));
+                      var pos = new THREE.Vector3(3,3,3); // console.log(pos); console.log(view.camera.camera3D.position);
+                      cameraP.position.copy(pos);
+
+                      /*
+                      // Here we need to check the coordinate system of the received camera
+                      // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
+                      if(epsg_quaternion != undefined && epsg_quaternion != 4978){  // projectionCode
+                          var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
+                          var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:' + epsg_quaternion, "EPSG:4978")(coords);
+                          quaternion.premultiply(quat_crs2crs);
+                      }
+
+
+                      // Here we need to check the coordinate system of the received camera
+                      // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
+                      if(epsg_quaternion == undefined){  // projectionCode
+                          var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
+                          var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:2154' //+ projectionCode, "EPSG:4978")(coords);
+                          quaternion.premultiply(quat_crs2crs);
+                          //quaternion.multiply(new THREE.Quaternion(1,0,0,0));
+                      }
+    */
+                      cameraP.quaternion.copy(quaternion);
+                      //cameras.add(cameraP);
+
+                      createCameraHelper(cameraP);
+                      // m.add(sceneAllCams);
                     }
-                    var cameraP = new PhotogrammetricCamera(focal, size, point, 0, disto, undefined, undefined, undefined, imageMatrix );//, size, point, 0, [], 10, 10000); //, skew, distos, near, far);
-                    // We inject the name of the image in the camera attributes
-                    cameraP.name = 'photo1';
-                    cameraP.originalName = 'photo1';
-                    cameraP.propAdded = prop; // Dirty and naughty: we add all info we got to the photogrammetric camera object
-
-                    // Extrinsec
-                    var quaternion = new THREE.Quaternion(prop.qx, prop.qy, prop.qz, prop.qw); // console.log(m.feature.vertices.slice(i * 3, i * 3 + 3));
-                    var pos = new THREE.Vector3(3,3,3); // console.log(pos); console.log(view.camera.camera3D.position);
-                    cameraP.position.copy(pos);
-
-                    /*
-                    // Here we need to check the coordinate system of the received camera
-                    // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
-                    if(epsgquaternion != undefined && epsgquaternion != 4978){  // projectionCode
-                        var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
-                        var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:' + epsgquaternion, "EPSG:4978")(coords);
-                        quaternion.premultiply(quat_crs2crs);
-                    }
-
-
-                    // Here we need to check the coordinate system of the received camera
-                    // If already EPSG:4978, nothing to do. If other, we need to compute the new orientation in our scene system (4978)
-                    if(epsgquaternion == undefined){  // projectionCode
-                        var coords = new itowns.Coordinates('EPSG:4978', pos.x, pos.y, pos.z);
-                        var quat_crs2crs = itowns.OrientationUtils.quaternionFromCRSToCRS('EPSG:2154' //+ projectionCode, "EPSG:4978")(coords);
-                        quaternion.premultiply(quat_crs2crs);
-                        //quaternion.multiply(new THREE.Quaternion(1,0,0,0));
-                    }
-*/
-                    cameraP.quaternion.copy(quaternion);
-                    //cameras.add(cameraP);
-
-                    createCameraHelper(cameraP);
-                    // m.add(sceneAllCams);
-
-
-
-
-
 
                     // Function that create cameraHelper with all the properties of the oriented image
                     // Picking on it to associate camera scene
