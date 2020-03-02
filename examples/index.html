@@ -787,24 +787,22 @@
             gui.add(textureMaterial, 'diffuseColorGrey');
             gui.add(textureMaterial, 'debugOpacity', 0, 1);
 
+            var path2 = 'https://raw.githubusercontent.com/lucasdemassy/3D-view-with-aerial-photographies/ChargementImage/examples/data/';
+            var source2 = new FetchSource(path2);
+            loadImage('photo7.jpg', source2);
+            loadImage('photo8.jpg', source2);
+            loadImage('photo9.jpg', source2);
+            loadImage('photo10.jpg', source2);
             var path = 'https://raw.githubusercontent.com/micmacIGN/Documentation/master/NEW-DATA/CompensOnLine/';
             var source = new FetchSource(path);
             plane.position.z = -16.56;
-
             loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source);
             /*
             loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0205.jpg.xml', 'Abbey-IMG_0205.jpg', source);
             loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0206.jpg.xml', 'Abbey-IMG_0206.jpg', source);
             loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0207.jpg.xml', 'Abbey-IMG_0207.jpg', source);
             */
-            var path2 = 'https://raw.githubusercontent.com/lucasdemassy/3D-view-with-aerial-photographies/ChargementImage/examples/data/';
-            var source2 = new FetchSource(path2);
-            //loadOrientedImage('Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source2);
-            loadImage('photo7.jpg', source2);
-            loadImage('photo8.jpg', source2);
-            loadImage('photo9.jpg', source2);
-            loadImage('photo10.jpg', source2);
-            orbitControls.target.set(0, 0, plane.position.z);
+            orbitControls.target.set(3, 3, plane.position.z);
 
             return gui;
         }
