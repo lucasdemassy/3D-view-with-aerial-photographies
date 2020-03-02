@@ -79,7 +79,6 @@
         var textureCamera = viewCamera;
         var duration = 0.3;
         var useCustomCameraHelper = true;
-        var scenes;
         var todos = [];
         var plane, sphere;
         viewCamera.zoom = 0.8; // zoom out a bit to see the image borders
@@ -282,7 +281,7 @@
                 let epsgquaternion=2154;
 
                 const relative_distance = 100;
-                addOrientationCamera(prop, epsgquaternion, 'photo1', 3, 3, 3);
+                addOrientationCamera(prop, epsgquaternion, 'photo7', 3, 3, 3);
                 addOrientationCamera(prop8, epsgquaternion8, 'photo8', 3+((prop.x - prop8.x)/relative_distance), 3+((prop.y - prop8.y)/relative_distance), 3+((prop.z - prop8.z)/relative_distance));
                 addOrientationCamera(prop9, epsgquaternion9, 'photo9', 3+((prop.x - prop9.x)/relative_distance), 3+((prop.y - prop9.y)/relative_distance), 3+((prop.z - prop9.z)/relative_distance));
                 addOrientationCamera(prop10, epsgquaternion10, 'photo10', 3+((prop.x - prop10.x)/relative_distance), 3+((prop.y - prop10.y)/relative_distance), 3+((prop.z - prop10.z)/relative_distance));
@@ -668,7 +667,6 @@
 
             function setTexture(camera) {
                 if (!camera) return;
-                console.log('Texture:', camera.name);
                 textureCamera = camera;
                 setMaterial(textureMaterial, camera);
             }
@@ -750,52 +748,6 @@
             }
 
 
-            /* preset scenes */
-            scenes = {
-                Clear: function () {
-                    todos.length = 0;
-                    const camera = new PhotogrammetricCamera();
-                    prevCamera.set(camera);
-                    viewCamera.set(camera);
-                    nextCamera.set(camera);
-                    nextCamera.timestamp = undefined;
-                    viewCamera.zoom = 0.8; // zoom out a bit to see the image borders
-                    textureCamera = viewCamera;
-                    gui.updateFromCamera(viewCamera);
-                    textureMaterial.map = null;
-                    Object.keys(textures).forEach(key => textures[key].dispose());
-                    while (cameras.children.length) cameras.remove(cameras.children[0]);
-                    while (plyGroup.children.length) plyGroup.remove(plyGroup.children[0]);
-                    showHelp(true);
-                    plane.position.z = 0;
-                },
-                Abbey: function () {
-                    var path = 'https://raw.githubusercontent.com/micmacIGN/Documentation/master/NEW-DATA/CompensOnLine/';
-                    var source = new FetchSource(path);
-                    plane.position.z = -16.56;
-
-                    //loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source);
-                    /*
-                    loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0205.jpg.xml', 'Abbey-IMG_0205.jpg', source);
-                    loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0206.jpg.xml', 'Abbey-IMG_0206.jpg', source);
-                    loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0207.jpg.xml', 'Abbey-IMG_0207.jpg', source);
-                    */
-                    var path2 = 'https://raw.githubusercontent.com/lucasdemassy/3D-view-with-aerial-photographies/ChargementImage/';
-                    var source2 = new FetchSource(path2);
-                    loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source2);
-                    loadImage('photo1.jpg', source2);
-                    loadImage('photo8.jpg', source2);
-                    loadImage('photo9.jpg', source2);
-                    loadImage('photo10.jpg', source2);
-                    orbitControls.target.set(0, 0, plane.position.z);
-                },
-                Maurepas: function () {
-                    loadJSON('http://mathieu.bredif.free.fr/cors.php?url=data/maurepas/');
-                    // orbitControls is broken here
-                },
-            }
-
-
         // GUI functions
 
         function showHelp(show) {
@@ -825,10 +777,6 @@
             cameraGUI.width = cameraGUI.add(viewCamera.view, 'width', 1, viewCamera.view.fullWidth).name('crop width').listen().onChange(updateViewCameraFromGUI);
             cameraGUI.height = cameraGUI.add(viewCamera.view, 'height', 1, viewCamera.view.fullHeight).name('crop height').listen().onChange(updateViewCameraFromGUI);
 
-            var scenesGUI = gui.addFolder('Scenes');
-            for (const key in scenes) scenesGUI.add(scenes, key);
-            scenesGUI.closed = false;
-
             var backgroundGUI = gui.addFolder('Background');
             backgroundGUI.add(textureMaterial, 'wireframe');
             backgroundGUI.add(sphere, 'visible').name('sphere visible');
@@ -838,6 +786,25 @@
             gui.add(textureMaterial, 'borderSharpness', 2, 200);
             gui.add(textureMaterial, 'diffuseColorGrey');
             gui.add(textureMaterial, 'debugOpacity', 0, 1);
+
+            var path = 'https://raw.githubusercontent.com/micmacIGN/Documentation/master/NEW-DATA/CompensOnLine/';
+            var source = new FetchSource(path);
+            plane.position.z = -16.56;
+
+            //loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source);
+            /*
+            loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0205.jpg.xml', 'Abbey-IMG_0205.jpg', source);
+            loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0206.jpg.xml', 'Abbey-IMG_0206.jpg', source);
+            loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0207.jpg.xml', 'Abbey-IMG_0207.jpg', source);
+            */
+            var path2 = 'https://raw.githubusercontent.com/lucasdemassy/3D-view-with-aerial-photographies/ChargementImage/';
+            var source2 = new FetchSource(path2);
+            //loadOrientedImage('Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source2);
+            loadImage('photo7.jpg', source2);
+            loadImage('photo8.jpg', source2);
+            loadImage('photo9.jpg', source2);
+            loadImage('photo10.jpg', source2);
+            orbitControls.target.set(0, 0, plane.position.z);
 
             return gui;
         }
