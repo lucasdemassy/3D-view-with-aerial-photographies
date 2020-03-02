@@ -35,10 +35,10 @@ The server will start and the project can be accessed locally.
 - Julie Grosmaire
 
 ## Licence
-This project was forked from [Photogrammetric Camera](https://github.com/itownsResearch/itowns-photogrammetric-camera) and therefore is also dual-licenced under Cecill-B V1.0 and MIT. Incorporated libraries are published under their original licences.
+This project was forked from [Photogrammetric Camera](https://github.com/itownsResearch/photogrammetric-camera) and therefore is also dual-licenced under Cecill-B V1.0 and MIT. Incorporated libraries are published under their original licences.
 
 #### Reference :
-- base project : [Camera Photogrammétrique](https://github.com/itownsResearch/itowns-photogrammetric-camera)
+- base project : [Camera Photogrammétrique](https://github.com/itownsResearch/photogrammetric-camera)
 - images : IGN remonter le temps
 
 
