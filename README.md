@@ -12,6 +12,11 @@ Two main objectives were determined :
 
 The working example `index.html` is in the `examples` folder. Moreover, it can be found at :  http://lucasdemassy.github.io/3D-view-with-aerial-photographies 
 
+## Images
+Currently, the images have a very low resolution and have to be changed.
+
+The four images currently used (photo1.jpg, photo8.jpg, photo9.jpg, photo10.jpg) have their orientation in alegoria.json at the position 1, 8, 9, 10.
+
 ## Installation
 
 ### Prerequisites
