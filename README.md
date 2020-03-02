@@ -6,6 +6,8 @@ This project was completed within a 3D course at the [ENSG](http://www.ensg.eu/)
 
 The user can rotate about a specific point.
 
+He can also display cameras by checking a box in the right side of the interface. He can now see where cameras are located.
+
 Two main objectives were determined :
 - fetch and render images from a IGN database. All images displaying a specific point must be fetched and displayed.
 - find the image taken with the camera with the most appropriate point of view compared to the user point of view to display this image preferably
@@ -13,9 +15,9 @@ Two main objectives were determined :
 The working example `index.html` is in the `examples` folder. Moreover, it can be found at :  http://lucasdemassy.github.io/3D-view-with-aerial-photographies/examples/ 
 
 ## Images
-Currently, the images have a very low resolution and have to be changed.
+Currently, the images 8, 9, and 10 have a very low resolution and have to be changed.
 
-The four images currently used (photo1.jpg, photo8.jpg, photo9.jpg, photo10.jpg) have their orientation in alegoria.json at the position 1, 8, 9, 10.
+The four images currently used (photo7.jpg, photo8.jpg, photo9.jpg, photo10.jpg) have their orientation in alegoria.json at the position 7, 8, 9, 10.
 
 ## Installation
 
@@ -45,6 +47,3 @@ This project was forked from [Photogrammetric Camera](https://github.com/itownsR
 #### Reference :
 - base project : [Camera Photogrammétrique](https://github.com/itownsResearch/photogrammetric-camera)
 - images : IGN remonter le temps
-
-
-[Photo1 link](https://wxs.ign.fr/02eikbvn4qqd6y1g5iiiq8fi/iipsrv.fcgi?FIF=DEMAT.PVA/2314-1701/IGNF_PVA_1-0__1960-09__C2314-1701_1960_CDP1575_0044.jp2&WID=1000&CVT=JPEG)
