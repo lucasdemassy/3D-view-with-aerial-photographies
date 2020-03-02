@@ -10,7 +10,7 @@ Two main objectives were determined :
 - fetch and render images from a IGN database. All images displaying a specific point must be fetched and displayed.
 - find the image taken with the camera with the most appropriate point of view compared to the user point of view to display this image preferably
 
-The working example `index.html` is in the `examples` folder. Moreover, it can be found at :  http://lucasdemassy.github.io/3D-view-with-aerial-photographies 
+The working example `index.html` is in the `examples` folder. Moreover, it can be found at :  http://lucasdemassy.github.io/3D-view-with-aerial-photographies/examples/ 
 
 ## Images
 Currently, the images have a very low resolution and have to be changed.
