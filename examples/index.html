@@ -164,7 +164,93 @@
 
 
 
+                let prop8 = {
+                  qx:-0.00272761975109458,
+                  qy:-0.00358269430121334,
+                  qw:0.848678096061593,
+                  fx:2003.62944511428,
+                  fy:2003.62944511428	,
+                  px:3712.88883750175,
+                  py:3896.74250583491,
+                  sk:0,
+                  sx:8950,
+                  sy:9400,
+                  c3:null,
+                  c5:null,
+                  c7:null,
+                  cm:null,
+                  cx:null,
+                  cy:null,
+                  m00:0.9999572414,
+                  m01:-0.00028166316023,
+                  m10:0.00047639045022,
+                  m11:0.99980060782,
+                  m20:622.2064723337,
+                  m21:1099.84391517865,
+                  x: 4197487.58395682,
+                  y: 162844.39782768,
+                  z: 4783764.64167721,
+                }
+                let epsgquaternion8=2154;
 
+                let prop9 = {
+                  qx:-0.00200933016256824,
+                  qy:-0.00719113094376537,
+                  qw:0.850287534696081,
+                  fx:2003.62944511428,
+                  fy:2003.62944511428	,
+                  px:3712.88883750175,
+                  py:3896.74250583491,
+                  sk:0,
+                  sx:8950,
+                  sy:9400,
+                  c3:null,
+                  c5:null,
+                  c7:null,
+                  cm:null,
+                  cx:null,
+                  cy:null,
+                  m00:1.00011810832,
+                  m01:-0.0036369682275,
+                  m10:0.00391160616,
+                  m11:1.00000804148,
+                  m20:567.634242,
+                  m21:1121.7339188125,
+                  x: 4197589.78409997,
+                  y: 163192.27002435,
+                  z: 4783667.81019333,
+                }
+                let epsgquaternion9=2154;
+
+
+                let prop10 = {
+                  qx:-0.00509375516500445,
+                  qy:-0.00114198451956911,
+                  qw:0.851715454665093,
+                  fx:2003.62944511428,
+                  fy:2003.62944511428	,
+                  px:3712.88883750175,
+                  py:3896.74250583491,
+                  sk:0,
+                  sx:8950,
+                  sy:9400,
+                  c3:null,
+                  c5:null,
+                  c7:null,
+                  cm:null,
+                  cx:null,
+                  cy:null,
+                  m00:1.00009694162,
+                  m01:-0.0014927603508,
+                  m10:0.00173468938179,
+                  m11:0.99984929123,
+                  m20:575.22308199465,
+                  m21:1109.331721704,
+                  x: 4197749.27218064,
+                  y: 163486.88997486,
+                  z: 4783523.15525426,
+                }
+                let epsgquaternion10=2154;
 
                 let prop = {
                   qx:-0.000656002501752845,
@@ -189,17 +275,26 @@
                   m11:1.00006519157,
                   m20:575.6508756034,
                   m21:1090.5137974068,
-
+                  x: 4197997.90125639,
+                  y: 161629.03901728,
+                  z: 4783351.54162445,
                 }
                 let epsgquaternion=2154;
 
-                addOrientationCamera(prop, epsgquaternion);
+                const relative_distance = 100;
+                addOrientationCamera(prop, epsgquaternion, 'photo1', 3, 3, 3);
+                addOrientationCamera(prop8, epsgquaternion8, 'photo8', 3+((prop.x - prop8.x)/relative_distance), 3+((prop.y - prop8.y)/relative_distance), 3+((prop.z - prop8.z)/relative_distance));
+                addOrientationCamera(prop9, epsgquaternion9, 'photo9', 3+((prop.x - prop9.x)/relative_distance), 3+((prop.y - prop9.y)/relative_distance), 3+((prop.z - prop9.z)/relative_distance));
+                addOrientationCamera(prop10, epsgquaternion10, 'photo10', 3+((prop.x - prop10.x)/relative_distance), 3+((prop.y - prop10.y)/relative_distance), 3+((prop.z - prop10.z)/relative_distance));
+
+
+                console.log("X: ", 3+((prop.x - prop8.x)/relative_distance))
+                console.log("Y: ", 3+((prop.y - prop8.y)/relative_distance));
+                console.log("Z: ", 3+((prop.z - prop8.z)/relative_distance))
 
 
 
-
-
-                function addOrientationCamera(orientation_json, epsg_quaternion) {
+                function addOrientationCamera(orientation_json, epsg_quaternion, name, posX, posY, posZ) {
                   // We then create a photogrammetric camera using the PVA properties
                   // Intrinsec properties
                   var focal =  [orientation_json.fx, orientation_json.fy];
@@ -219,13 +314,13 @@
                   }
                   var cameraP = new PhotogrammetricCamera(focal, size, point, 0, disto, undefined, undefined, undefined, imageMatrix );//, size, point, 0, [], 10, 10000); //, skew, distos, near, far);
                   // We inject the name of the image in the camera attributes
-                  cameraP.name = 'photo1';
-                  cameraP.originalName = 'photo1';
+                  cameraP.name = name;
+                  cameraP.originalName = name;
                   cameraP.propAdded = orientation_json; // Dirty and naughty: we add all info we got to the photogrammetric camera object
 
                   // Extrinsec
                   var quaternion = new THREE.Quaternion(orientation_json.qx, orientation_json.qy, orientation_json.qz, orientation_json.qw); // console.log(m.feature.vertices.slice(i * 3, i * 3 + 3));
-                  var pos = new THREE.Vector3(3,3,3); // console.log(pos); console.log(view.camera.camera3D.position);
+                  var pos = new THREE.Vector3(posX, posY, posZ); // console.log(pos); console.log(view.camera.camera3D.position);
                   cameraP.position.copy(pos);
 
                   /*
@@ -678,13 +773,20 @@
                     var path = 'https://raw.githubusercontent.com/micmacIGN/Documentation/master/NEW-DATA/CompensOnLine/';
                     var source = new FetchSource(path);
                     plane.position.z = -16.56;
-                    loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source);
+
+                    //loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source);
+                    /*
                     loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0205.jpg.xml', 'Abbey-IMG_0205.jpg', source);
                     loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0206.jpg.xml', 'Abbey-IMG_0206.jpg', source);
                     loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0207.jpg.xml', 'Abbey-IMG_0207.jpg', source);
+                    */
                     var path2 = 'https://raw.githubusercontent.com/lucasdemassy/3D-view-with-aerial-photographies/ChargementImage/';
                     var source2 = new FetchSource(path2);
+                    loadOrientedImage('Ori-Rel/Orientation-Abbey-IMG_0204.jpg.xml', 'Abbey-IMG_0204.jpg', source2);
                     loadImage('photo1.jpg', source2);
+                    loadImage('photo8.jpg', source2);
+                    loadImage('photo9.jpg', source2);
+                    loadImage('photo10.jpg', source2);
                     orbitControls.target.set(0, 0, plane.position.z);
                 },
                 Maurepas: function () {
